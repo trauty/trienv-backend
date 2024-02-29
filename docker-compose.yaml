@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  trienv_db:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: HGOc0L195l8=
+      MYSQL_DATABASE: trienv
+      MYSQL_USER: trienv_user
+      MYSQL_PASSWORD: HGOc0L195l8=
+      MYSQL_TCP_PORT: 3310
+    restart: always
+    ports:
+      - '3310:3310'
+    expose:
+      - '3310'
+    networks:
+      - trienv-network
+networks:
+  trienv-network:
