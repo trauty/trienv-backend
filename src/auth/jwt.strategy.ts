@@ -1,17 +1,21 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
+import { InjectDataSource } from "@nestjs/typeorm";
 import { Request } from "express";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import { conn } from "src/db";
+import { IUser } from "src/types";
+import { DataSource } from "typeorm";
 
 @Injectable()
 export class JWTStrategy extends PassportStrategy(Strategy) {
     constructor(
-        config: ConfigService
+        config: ConfigService,
+        @InjectDataSource() private readonly conn: DataSource
+
     ) {
         super({
-            jwtReq: ExtractJwt.fromExtractors([
+            jwtFromRequest: ExtractJwt.fromExtractors([
                 JWTStrategy.extractJWTFromCookie,
                 ExtractJwt.fromAuthHeaderAsBearerToken()
             ]),
@@ -33,9 +37,15 @@ export class JWTStrategy extends PassportStrategy(Strategy) {
         return null;
     }
 
-    async validate(payload: { sub: number, email:string }) {
+    async validate(payload: { sub: number, email: string }) {
         try {
-            const [rows] = conn.query(`SELECT * FROM users WHERE 'id' = ?`, payload.sub);
+            const userArray = await this.conn.query<IUser[]>("SELECT * FROM users WHERE email = ?", [payload.email]);
+
+            const user = userArray[0];
+
+            delete user.password;
+
+            return user;
             
         } catch (err) {
             return null;

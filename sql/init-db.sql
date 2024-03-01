@@ -1,0 +1,12 @@
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    tag VARCHAR(255) NOT NULL,
+    image VARCHAR(512) DEFAULT NULL,
+    admin BOOLEAN NOT NULL DEFAULT FALSE,
+    createdAt DATETIME DEFAULT NOW(),
+    updatedAt DATETIME DEFAULT NOW() ON UPDATE NOW(),
+    CONSTRAINT unique_username_tag UNIQUE (username, tag)
+);
