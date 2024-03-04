@@ -70,7 +70,7 @@ export class UserService {
             ws.write(file.buffer);
 
             await this.conn.query("UPDATE users SET image = ? WHERE email = ?", 
-                [`${this.config.get("BASE_URL")}/icons/${filename}`, user.email]
+                [`${this.config.get("BASE_URL")}/images/${filename}`, user.email]
             );
         } catch (err) {
             throw new InternalServerErrorException("Serverfehler.");

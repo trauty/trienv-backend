@@ -10,8 +10,8 @@ async function bootstrap() {
   app.enableCors({
     credentials: true,
     origin: [
-      "http://localhost",
-      "https://localhost",
+      "http://localhost:3000",
+      "https://localhost:3000",
       "https://trienv.trauty.dev",
     ],
   });
