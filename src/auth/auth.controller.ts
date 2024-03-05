@@ -16,35 +16,11 @@ export class AuthController {
     async signIn(@Body() dto: SignInDto, @Res({ passthrough: true }) res: Response) {
         const access_token = (await this.authService.signIn(dto)).access_token;
 
-        const currentDate = new Date();
-
-        res.cookie("trienv_token", access_token, {
-            expires: new Date(
-                currentDate.getFullYear(),
-                currentDate.getMonth(),
-                currentDate.getDate() + 1,
-            ),
-            signed: true,
-            secure: true,
-            sameSite: "none",
-            httpOnly: true,
-        });
-
         return {
             status: 200,
             message: "Erfolgreich angemeldet.",
-            access_token
+            access_token,
+            expires_in: 604800
         };
-    }
-
-    @Post("signout")
-    signout(@Res({ passthrough: true }) res: Response) {
-        res.cookie("trienv_token", "", {
-            maxAge: 1,
-            signed: true,
-            secure: true,
-            sameSite: "none",
-            httpOnly: true,
-        });
     }
 }

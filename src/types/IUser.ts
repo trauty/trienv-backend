@@ -8,6 +8,6 @@ export interface IUser {
     tag: string;
     image: string | null;
     admin: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
 };

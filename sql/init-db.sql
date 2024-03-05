@@ -6,7 +6,7 @@ CREATE TABLE users (
     tag VARCHAR(255) NOT NULL,
     image VARCHAR(512) DEFAULT NULL,
     admin BOOLEAN NOT NULL DEFAULT FALSE,
-    createdAt DATETIME DEFAULT NOW(),
-    updatedAt DATETIME DEFAULT NOW() ON UPDATE NOW(),
+    created_at DATETIME DEFAULT NOW(),
+    updated_at DATETIME DEFAULT NOW() ON UPDATE NOW(),
     CONSTRAINT unique_username_tag UNIQUE (username, tag)
 );

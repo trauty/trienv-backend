@@ -16,25 +16,11 @@ export class JWTStrategy extends PassportStrategy(Strategy) {
     ) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([
-                JWTStrategy.extractJWTFromCookie,
                 ExtractJwt.fromAuthHeaderAsBearerToken()
             ]),
             ignoreExpiration: false,
             secretOrKey: config.get("JWT_SECRET"),
         });
-    }
-
-    private static extractJWTFromCookie(req: Request): string | null {
-        if 
-        (
-            req.signedCookies &&
-            "trienv_token" in req.signedCookies &&
-            req.signedCookies["trienv_token"].length > 0
-        ) {
-            return req.signedCookies["trienv_token"];
-        }
-
-        return null;
     }
 
     async validate(payload: { sub: number, email: string }) {
