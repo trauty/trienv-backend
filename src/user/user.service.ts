@@ -6,7 +6,6 @@ import { DataSource } from "typeorm";
 import { InjectDataSource } from "@nestjs/typeorm";
 import * as fs from "node:fs";
 import { v4 as uuidv4 } from "uuid";
-import { error } from "node:console";
 
 @Injectable()
 export class UserService {
@@ -17,7 +16,7 @@ export class UserService {
 
     async changeName(user: IUser, dto: UserNameChangeDto) {
         try {
-            await this.conn.query("UPDATE users SET username = ?, tag = ? WHERE email = ?", 
+            await this.conn.query("UPDATE user SET username = ?, tag = ? WHERE email = ?", 
                 [dto.new_username, dto.new_tag, user.email]
             );
         } catch (err) {
@@ -41,7 +40,7 @@ export class UserService {
                 force: true,
             });
 
-            await this.conn.query("UPDATE users SET image = ? WHERE email = ?", 
+            await this.conn.query("UPDATE user SET image = ? WHERE email = ?", 
                 [null, user.email]
             );
             
@@ -62,14 +61,14 @@ export class UserService {
             if (user.image) {
                 filename = user.image.split('/').pop();
             } else {
-                filename = `${user.id}-${uuidv4()}.${file.originalname.split('.').pop()}`;
+                filename = `${user.user_id}-${uuidv4()}.${file.originalname.split('.').pop()}`;
             }
 
             fs.mkdirSync(`${this.config.get("STATIC_LOCATION")}/images`, { recursive: true })
             const ws = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/images/${filename}`);
             ws.write(file.buffer);
 
-            await this.conn.query("UPDATE users SET image = ? WHERE email = ?", 
+            await this.conn.query("UPDATE user SET image = ? WHERE email = ?", 
                 [`${this.config.get("BASE_URL")}/images/${filename}`, user.email]
             );
         } catch (err) {

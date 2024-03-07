@@ -21,11 +21,11 @@ export class AuthService {
         try {
             const tag = (Math.random().toString(36) + '00000000000000000').slice(2, 8);
 
-            await this.conn.query("INSERT INTO users(email, password, username, tag) VALUES(?, ?, ?, ?)",
+            await this.conn.query("INSERT INTO user(email, password, username, tag) VALUES(?, ?, ?, ?)",
                 [cred.email, hash, cred.username, tag]
             );
 
-            const userArray = await this.conn.query<IUser[]>("SELECT * FROM users WHERE email = ?", [cred.email]);
+            const userArray = await this.conn.query<IUser[]>("SELECT * FROM user WHERE email = ?", [cred.email]);
 
             const user = userArray[0];
 
@@ -43,7 +43,7 @@ export class AuthService {
 
     async signIn(dto: SignInDto) {
         try {
-            const userArray = await this.conn.query<IUser[]>("SELECT * FROM users WHERE email = ?", [dto.email]);
+            const userArray = await this.conn.query<IUser[]>("SELECT * FROM user WHERE email = ?", [dto.email]);
             const user = userArray[0];
 
             if (!user) {
@@ -56,25 +56,46 @@ export class AuthService {
                 throw new ForbiddenException("E-Mail oder Passwort nicht korrekt.");
             }
 
-            return this.signToken(user.id, user.email);
+            return {
+                access_token: await this.signAccessToken(user.user_id, user.email),
+                refresh_token: await this.signRefreshToken(user.user_id, user.email)
+            };
         } catch (err) {
             throw err;
         }
     }
 
-    async signToken(id: number, email: string): Promise<{ access_token }> {
+    async refreshToken(sub: number, email: string) {
+        return {
+            access_token: await this.signAccessToken(sub, email)
+        };
+    }
+
+    async signAccessToken(id: number, email: string): Promise<string> {
         const payload = {
             sub: id,
             email
         };
 
         const token = await this.jwt.signAsync(payload, {
-            expiresIn: 24 * 60 * 60,
+            expiresIn: "600s",
             secret: this.config.get("JWT_SECRET"),
         });
 
-        return {
-            access_token: token
-        }
+        return token;
+    }
+
+    async signRefreshToken(id: number, email: string): Promise<string> {
+        const payload = {
+            sub: id,
+            email
+        };
+
+        const token = await this.jwt.signAsync(payload, {
+            expiresIn: "7d",
+            secret: this.config.get("REFRESH_JWT_SECRET"),
+        });
+
+        return token;
     }
 }

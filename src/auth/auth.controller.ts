@@ -1,7 +1,8 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Post, Request, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto, SignUpDto } from './auth.dto';
 import { Response } from 'express';
+import { RefreshJWTGuard } from './refresh-jwt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -13,14 +14,13 @@ export class AuthController {
     }
 
     @Post("signin")
-    async signIn(@Body() dto: SignInDto, @Res({ passthrough: true }) res: Response) {
-        const access_token = (await this.authService.signIn(dto)).access_token;
+    async signIn(@Body() dto: SignInDto) {
+        return this.authService.signIn(dto);
+    }
 
-        return {
-            status: 200,
-            message: "Erfolgreich angemeldet.",
-            access_token,
-            expires_in: 604800
-        };
+    @UseGuards(RefreshJWTGuard)
+    @Post("refresh")
+    async refreshToken(@Request() req) {
+        return this.authService.refreshToken(req.user.sub, req.user.email);
     }
 }
