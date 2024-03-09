@@ -3,7 +3,7 @@ import { GetUser } from "src/auth/get-user.decorator";
 import { JWTGuard } from "src/auth/jwt.guard";
 import { IUser } from "src/types";
 import { UserService } from "./user.service";
-import { UserNameChangeDto } from "./user.dto";
+import { UserBgDto, UserNameChangeDto } from "./user.dto";
 import { FileInterceptor } from "@nestjs/platform-express";
 
 @UseGuards(JWTGuard)
@@ -21,6 +21,11 @@ export class UserController {
     @Patch("username")
     changeUsername(@GetUser() user: IUser, @Body() dto: UserNameChangeDto) {
         return this.userService.changeName(user, dto);
+    }
+
+    @Patch("color")
+    changeBgColor(@GetUser() user: IUser, @Body() dto: UserBgDto) {
+        return this.userService.changeBgColor(user, dto);
     }
 
     @Delete("image")

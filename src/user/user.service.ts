@@ -1,7 +1,7 @@
 import { ForbiddenException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { IUser } from "src/types";
-import { UserNameChangeDto } from "./user.dto";
+import { UserBgDto, UserNameChangeDto } from "./user.dto";
 import { DataSource } from "typeorm";
 import { InjectDataSource } from "@nestjs/typeorm";
 import * as fs from "node:fs";
@@ -13,6 +13,18 @@ export class UserService {
         private config: ConfigService,
         @InjectDataSource() private readonly conn: DataSource
     ) {}
+
+    async changeBgColor(user: IUser, dto: UserBgDto) {
+        try {
+            await this.conn.query("UPDATE user SET bg_color = ? WHERE email = ?;", 
+                [dto.new_color, user.email]
+            );
+        } catch (err) {
+            throw new InternalServerErrorException("Serverfehler.");
+        }
+        
+        return { status: HttpStatus.OK, message: "Hintergrundfarbe aktualisiert." };
+    }
 
     async changeName(user: IUser, dto: UserNameChangeDto) {
         try {
@@ -36,8 +48,8 @@ export class UserService {
 
             const filename = user.image.split('/').pop();
             
-            fs.rmSync(`${this.config.get("STATIC_LOCATION")}/images/${filename}`, {
-                force: true,
+            fs.unlink(`${this.config.get("STATIC_LOCATION")}/images/${filename}`, (err) => {
+                throw new InternalServerErrorException("Serverfehler: " + err);
             });
 
             await this.conn.query("UPDATE user SET image = ? WHERE email = ?", 
@@ -64,13 +76,14 @@ export class UserService {
                 filename = `${user.user_id}-${uuidv4()}.${file.originalname.split('.').pop()}`;
             }
 
-            fs.mkdirSync(`${this.config.get("STATIC_LOCATION")}/images`, { recursive: true })
-            const ws = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/images/${filename}`);
-            ws.write(file.buffer);
-
             await this.conn.query("UPDATE user SET image = ? WHERE email = ?", 
                 [`${this.config.get("BASE_URL")}/images/${filename}`, user.email]
             );
+
+            fs.mkdirSync(`${this.config.get("STATIC_LOCATION")}/images`, { recursive: true })
+            const ws = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/images/${filename}`);
+            ws.write(file.buffer);
+            ws.end();
         } catch (err) {
             throw new InternalServerErrorException("Serverfehler.");
         }
