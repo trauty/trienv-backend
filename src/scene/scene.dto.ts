@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, Max, MaxLength } from "class-validator";
+import { IsNotEmpty, IsString, MaxLength } from "class-validator";
 
 export class SceneDto {
     @IsNotEmpty()
@@ -10,4 +10,9 @@ export class SceneDto {
     @IsString()
     @MaxLength(512)
     description: string;
+}
+
+export class UpdateSceneDto {
+    @IsNotEmpty()
+    scene_id: string;
 }

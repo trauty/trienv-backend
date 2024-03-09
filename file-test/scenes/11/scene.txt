@@ -1,4 +1,0 @@
-15.02 : Design fertig
-19.02 : REST-API fertig
-27.02 : Front-End fertig
-Bis zum Ende : Trienv-App fertig

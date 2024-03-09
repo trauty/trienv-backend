@@ -1,5 +1,6 @@
 export interface IScene {
     scene_id: number;
+    version_id: number;
     name: string;
     description: string;
     icon_url: string;

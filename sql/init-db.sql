@@ -14,6 +14,7 @@ CREATE TABLE user (
 
 CREATE TABLE scene (
     scene_id INT AUTO_INCREMENT PRIMARY KEY,
+    version_id INT NOT NULL DEFAULT 1,
     name VARCHAR(255) NOT NULL,
     description VARCHAR(512) NOT NULL,
     icon_url VARCHAR(512) NOT NULL,

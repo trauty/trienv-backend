@@ -2,7 +2,7 @@ import { Body, Controller, Post, Request, Res, UseGuards } from '@nestjs/common'
 import { AuthService } from './auth.service';
 import { SignInDto, SignUpDto } from './auth.dto';
 import { Response } from 'express';
-import { RefreshJWTGuard } from './refresh-jwt.guard';
+import { RefreshJWTGuard } from './guards/refresh-jwt.guard';
 
 @Controller('auth')
 export class AuthController {

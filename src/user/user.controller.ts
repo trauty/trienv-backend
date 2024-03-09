@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpStatus, ParseFilePipeBuilder, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { GetUser } from "src/auth/get-user.decorator";
-import { JWTGuard } from "src/auth/jwt.guard";
+import { JWTGuard } from "src/auth/guards/jwt.guard";
 import { IUser } from "src/types";
 import { UserService } from "./user.service";
 import { UserBgDto, UserNameChangeDto } from "./user.dto";
