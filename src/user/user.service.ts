@@ -80,7 +80,12 @@ export class UserService {
                 [`${this.config.get("BASE_URL")}/images/${filename}`, user.email]
             );
 
-            fs.mkdirSync(`${this.config.get("STATIC_LOCATION")}/images`, { recursive: true })
+            const baseDir = `${this.config.get("STATIC_LOCATION")}/images`;
+
+            if (!fs.existsSync(baseDir)) {
+                fs.mkdirSync(baseDir, { recursive: true });
+            }
+
             const ws = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/images/${filename}`);
             ws.write(file.buffer);
             ws.end();
