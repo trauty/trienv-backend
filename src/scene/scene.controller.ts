@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Patch, Post, Query, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, HttpStatus, ParseFilePipeBuilder, Patch, Post, Query, UploadedFile, UploadedFiles, UseGuards, UseInterceptors } from "@nestjs/common";
 import { JWTGuard } from "src/auth/guards/jwt.guard";
 import { SceneService } from "./scene.service";
-import { FileFieldsInterceptor } from "@nestjs/platform-express";
+import { FileFieldsInterceptor, FileInterceptor } from "@nestjs/platform-express";
 import { GetUser } from "src/auth/get-user.decorator";
 import { IUser } from "src/types";
 import { SceneDto, UpdateSceneDto } from "./scene.dto";
@@ -20,8 +20,13 @@ export class SceneController {
     @Get()
     async getScene(@Query() params: any) {
         const id = params.sceneId as string;
+        const name = params.name as string;
 
-        return this.sceneService.getScene(id);
+        if (name) {
+            return this.sceneService.getSceneByName(name);
+        } else {
+            return this.sceneService.getSceneById(id);
+        }
     }
 
     @Get("unapproved")
@@ -57,28 +62,95 @@ export class SceneController {
     }
 
     @Post()
-    @UseInterceptors(FileFieldsInterceptor([
-        { name: "icon", maxCount: 1 },
-        { name: "banner", maxCount: 1 },
-        { name: "scene", maxCount: 1 }
-    ]))
-    async uploadScene(@UploadedFiles() files: { icon?: Express.Multer.File[], banner?: Express.Multer.File[], scene?: Express.Multer.File[] }, @GetUser() user: IUser, @Body() scene: SceneDto) {
-        return this.sceneService.uploadScene(files.icon[0], files.banner[0], files.scene[0], user, scene);
-    }
+    async createScene(@GetUser() user: IUser, @Body() scene: SceneDto) {
+        const check = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ? AND approved = FALSE;", [user.user_id]);
 
-    @Patch()
-    @UseInterceptors(FileFieldsInterceptor([
-        { name: "new_scene", maxCount: 1 }
-    ]))
-    async updateScene(@UploadedFiles() files: { new_scene?: Express.Multer.File[] }, @GetUser() user: IUser, @Body() scene: UpdateSceneDto) {
-
-        const check = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ? AND scene_id = ?;", [user.user_id, scene.scene_id]);
-
-        if (check.length <= 0) {
-            throw new ForbiddenException(`Kein Zugriff auf Szene mit der ID: ${scene.scene_id}.`);
+        if (check.length > 0) {
+            throw new ForbiddenException("Es existiert schon eine nicht genehmigte Szene.");
         }
 
-        return this.sceneService.updateScene(files.new_scene[0], scene);
+        return this.sceneService.createScene(user, scene);
+    }
+
+    @Patch("data")
+    @UseInterceptors(FileInterceptor("scene"))
+    async uploadSceneFile(
+        @UploadedFile(
+            new ParseFilePipeBuilder()
+                .addFileTypeValidator({
+                    fileType: 'application/octet-stream',
+                })
+                .addMaxSizeValidator({
+                    maxSize: 50000000
+                })
+                .build({
+                    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY
+                }),
+        ) sceneFile: Express.Multer.File,
+        @GetUser() user: IUser,
+        @Body() sceneData: UpdateSceneDto
+    ) {
+        const check = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ? AND scene_id = ?;", [user.user_id, sceneData.scene_id]);
+
+        if (check.length <= 0) {
+            throw new ForbiddenException(`Kein Zugriff auf Szene mit der ID: ${sceneData.scene_id}.`);
+        }
+
+        return this.sceneService.uploadSceneFile(sceneFile, sceneData);
+    }
+
+    @Patch("icon")
+    @UseInterceptors(FileInterceptor("icon"))
+    async uploadIconFile(
+        @UploadedFile(
+            new ParseFilePipeBuilder()
+                .addFileTypeValidator({
+                    fileType: ".(png|jpeg|jpg)",
+                })
+                .addMaxSizeValidator({
+                    maxSize: 256000
+                })
+                .build({
+                    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY
+                }),
+        ) sceneFile: Express.Multer.File,
+        @GetUser() user: IUser,
+        @Body() sceneData: UpdateSceneDto
+    ) {
+        const check = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ? AND scene_id = ?;", [user.user_id, sceneData.scene_id]);
+
+        if (check.length <= 0) {
+            throw new ForbiddenException(`Kein Zugriff auf Szene mit der ID: ${sceneData.scene_id}.`);
+        }
+
+        return this.sceneService.uploadIconFile(sceneFile, sceneData);
+    }
+
+    @Patch("banner")
+    @UseInterceptors(FileInterceptor("banner"))
+    async uploadBannerFile(
+        @UploadedFile(
+            new ParseFilePipeBuilder()
+                .addFileTypeValidator({
+                    fileType: ".(png|jpeg|jpg)",
+                })
+                .addMaxSizeValidator({
+                    maxSize: 4000000
+                })
+                .build({
+                    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY
+                }),
+        ) sceneFile: Express.Multer.File,
+        @GetUser() user: IUser,
+        @Body() sceneData: UpdateSceneDto
+    ) {
+        const check = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ? AND scene_id = ?;", [user.user_id, sceneData.scene_id]);
+
+        if (check.length <= 0) {
+            throw new ForbiddenException(`Kein Zugriff auf Szene mit der ID: ${sceneData.scene_id}.`);
+        }
+
+        return this.sceneService.uploadBannerFile(sceneFile, sceneData);
     }
 
     @Patch("approve")

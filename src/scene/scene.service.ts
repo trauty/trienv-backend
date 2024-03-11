@@ -14,7 +14,7 @@ export class SceneService {
         @InjectDataSource() private readonly conn: DataSource
     ) {}
 
-    async getScene(id: string) {
+    async getSceneById(id: string) {
         try {
             const scenes = await this.conn.query(`
                 SELECT scene_id, version_id, name, description, icon_url, banner_url, scene_url, created_at, updated_at 
@@ -23,7 +23,21 @@ export class SceneService {
 
             return { status: HttpStatus.OK, scenes };
         } catch (err) {
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
+        }
+    }
+
+    async getSceneByName(name: string) {
+        try {
+            const scenes = await this.conn.query(`
+                SELECT scene_id, version_id, name, description, icon_url, banner_url, scene_url, created_at, updated_at 
+                FROM scene WHERE name LIKE ? AND approved = TRUE;`, [`%${name}%`]
+            );
+
+            return { status: HttpStatus.OK, scenes };
+        } catch (err) {
+            throw err;
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 
@@ -36,7 +50,7 @@ export class SceneService {
 
             return { status: HttpStatus.OK, scene: scenes[0] };
         } catch (err) {
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 
@@ -49,7 +63,7 @@ export class SceneService {
 
             return { status: HttpStatus.OK, scenes };
         } catch (err) {
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 
@@ -59,40 +73,39 @@ export class SceneService {
 
             return { status: HttpStatus.OK, scenes };
         } catch (err) {
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 
-    async uploadScene(icon: Express.Multer.File, banner: Express.Multer.File, scene: Express.Multer.File, user: IUser, sceneData: SceneDto) {
+    async createScene(user: IUser, sceneData: SceneDto) {
+        try {
+            await this.conn.query("INSERT INTO scene (name, description, fk_user_id) VALUES (?, ?, ?);", [sceneData.name, sceneData.description, user.user_id]);
+
+            return { status: HttpStatus.CREATED, message: "Szene erfolgreich erstellt." }
+        } catch (err) {
+            throw new InternalServerErrorException("Serverfehler.");
+        }
+    }
+
+    async uploadSceneFile(sceneFile: Express.Multer.File, sceneData: UpdateSceneDto) {
         try {
             await this.conn.query("START TRANSACTION;");
 
-            await this.conn.query("INSERT INTO scene (name, description, icon_url, banner_url, scene_url, fk_user_id) VALUES (?, ?, ?, ?, ?, ?);", [sceneData.name, sceneData.description, "temp", "temp", "temp", user.user_id]);
-
-            const res = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ?;", [user.user_id]);
-
-            const newScene = res[0];
-
-            const baseUrl = `${this.config.get("BASE_URL")}/scenes/${newScene.scene_id}/`;
-
-
-            const iconName = `icon.${icon.originalname.split(".").pop()}`;
-            const bannerName = `banner.${banner.originalname.split(".").pop()}`;
+            const res = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE scene_id = ?;", [sceneData.scene_id]);
+            const scene = res[0];
             
-            await this.conn.query("UPDATE scene SET icon_url = ?, banner_url = ?, scene_url = ? WHERE fk_user_id = ?;", [baseUrl + iconName, baseUrl + bannerName, baseUrl + "scene.pck", user.user_id]);
+            const baseUrl = `${this.config.get("BASE_URL")}/scenes/${scene.scene_id}/`;
+            
+            await this.conn.query("UPDATE scene SET scene_url = ?, version_id = version_id + 1 WHERE scene_id = ?;", [baseUrl + "scene.pck", scene.scene_id]);
 
-            fs.mkdirSync(`${this.config.get("STATIC_LOCATION")}/scenes/${newScene.scene_id}`, { recursive: true })
+            const baseDir = `${this.config.get("STATIC_LOCATION")}/scenes/${scene.scene_id}`;
 
-            const wsIcon = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/scenes/${newScene.scene_id}/${iconName}`);
-            wsIcon.write(icon.buffer);
-            wsIcon.end();
+            if (!fs.existsSync(baseDir)) {
+                fs.mkdirSync(baseDir, { recursive: true });
+            }
 
-            const wsBanner = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/scenes/${newScene.scene_id}/${bannerName}`);
-            wsBanner.write(banner.buffer);
-            wsBanner.end();
-
-            const wsScene = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/scenes/${newScene.scene_id}/scene.pck`);
-            wsScene.write(scene.buffer);
+            const wsScene = fs.createWriteStream(`${baseDir}/scene.pck`);
+            wsScene.write(sceneFile.buffer);
             wsScene.end();
 
             await this.conn.query("COMMIT;");
@@ -100,23 +113,69 @@ export class SceneService {
             return { status: HttpStatus.CREATED, message: "Szene erfolgreich hochgeladen." }
         } catch (err) {
             await this.conn.query("ROLLBACK;");
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 
-    async updateScene(newScene: Express.Multer.File, sceneData: UpdateSceneDto) {
+    async uploadIconFile(iconFile: Express.Multer.File, sceneData: UpdateSceneDto) {
         try {
             await this.conn.query("START TRANSACTION;");
-            await this.conn.query("UPDATE scene SET version_id = version_id + 1 WHERE scene_id = ?;", [sceneData.scene_id]);
 
-            const wsScene = fs.createWriteStream(`${this.config.get("STATIC_LOCATION")}/scenes/${sceneData.scene_id}/scene.pck`);
-            wsScene.write(newScene.buffer);
-            wsScene.end();
+            const res = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE scene_id = ?;", [sceneData.scene_id]);
+            const scene = res[0];
+
+            const baseUrl = `${this.config.get("BASE_URL")}/scenes/${scene.scene_id}/`;
+            const iconName = `icon.${iconFile.originalname.split(".").pop()}`;
+            
+            await this.conn.query("UPDATE scene SET icon_url = ? WHERE scene_id = ?;", [baseUrl + iconName, scene.scene_id]);
+
+            const baseDir = `${this.config.get("STATIC_LOCATION")}/scenes/${scene.scene_id}`;
+
+            if (!fs.existsSync(baseDir)) {
+                fs.mkdirSync(baseDir, { recursive: true });
+            }
+
+            const wsIcon = fs.createWriteStream(`${baseDir}/${iconName}`);
+            wsIcon.write(iconFile.buffer);
+            wsIcon.end();
+
             await this.conn.query("COMMIT;");
-            return { status: HttpStatus.CREATED, message: "Szene erfolgreich aktualisiert." };
+
+            return { status: HttpStatus.CREATED, message: "Icon erfolgreich hochgeladen." }
         } catch (err) {
             await this.conn.query("ROLLBACK;");
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
+        }
+    }
+
+    async uploadBannerFile(bannerFile: Express.Multer.File, sceneData: UpdateSceneDto) {
+        try {
+            await this.conn.query("START TRANSACTION;");
+
+            const res = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE scene_id = ?;", [sceneData.scene_id]);
+            const scene = res[0];
+
+            const baseUrl = `${this.config.get("BASE_URL")}/scenes/${scene.scene_id}/`;
+            const bannerName = `banner.${bannerFile.originalname.split(".").pop()}`;
+            
+            await this.conn.query("UPDATE scene SET banner_url = ? WHERE scene_id = ?;", [baseUrl + bannerName, scene.scene_id]);
+
+            const baseDir = `${this.config.get("STATIC_LOCATION")}/scenes/${scene.scene_id}`;
+
+            if (!fs.existsSync(baseDir)) {
+                fs.mkdirSync(baseDir, { recursive: true });
+            }
+            
+            const wsBanner = fs.createWriteStream(`${baseDir}/${bannerName}`);
+            wsBanner.write(bannerFile.buffer);
+            wsBanner.end();
+
+            await this.conn.query("COMMIT;");
+
+            return { status: HttpStatus.CREATED, message: "Banner erfolgreich hochgeladen." }
+        } catch (err) {
+            await this.conn.query("ROLLBACK;");
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 
@@ -125,7 +184,7 @@ export class SceneService {
             await this.conn.query("UPDATE scene SET approved = TRUE WHERE scene_id = ?;", [sceneData.scene_id]);
             return { status: HttpStatus.CREATED, message: "Szene erfolgreich genehmigt." };
         } catch (err) {
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 
@@ -140,7 +199,7 @@ export class SceneService {
             return { status: HttpStatus.CREATED, message: "Szene erfolgreich gelöscht." };
         } catch (err) {
             await this.conn.query("ROLLBACK;");
-            throw new InternalServerErrorException("Serverfehler: " + err);
+            throw new InternalServerErrorException("Serverfehler.");
         }
     }
 }

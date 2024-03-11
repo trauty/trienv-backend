@@ -14,12 +14,12 @@ CREATE TABLE user (
 
 CREATE TABLE scene (
     scene_id INT AUTO_INCREMENT PRIMARY KEY,
-    version_id INT NOT NULL DEFAULT 1,
+    version_id INT NOT NULL DEFAULT 0,
     name VARCHAR(255) NOT NULL,
     description VARCHAR(512) NOT NULL,
-    icon_url VARCHAR(512) NOT NULL,
-    banner_url VARCHAR(512) NOT NULL,
-    scene_url VARCHAR(512) NOT NULL,
+    icon_url VARCHAR(512),
+    banner_url VARCHAR(512),
+    scene_url VARCHAR(512),
     approved BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME DEFAULT NOW(),
     updated_at DATETIME DEFAULT NOW() ON UPDATE NOW(),
