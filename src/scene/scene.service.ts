@@ -54,11 +54,11 @@ export class SceneService {
         }
     }
 
-    async getUnapprovedScenesUser(user: IUser) {
+    async getScenesUser(user: IUser) {
         try {
             const scenes = await this.conn.query(`
-                SELECT scene_id, version_id, name, description, icon_url, banner_url, scene_url, created_at, updated_at 
-                FROM scene WHERE fk_user_id = ? AND approved = FALSE;`, [user.user_id]
+                SELECT scene_id, version_id, name, description, icon_url, banner_url, scene_url, approved, created_at, updated_at 
+                FROM scene WHERE fk_user_id = ?;`, [user.user_id]
             );
 
             return { status: HttpStatus.OK, scenes };
@@ -79,9 +79,8 @@ export class SceneService {
 
     async createScene(user: IUser, sceneData: SceneDto) {
         try {
-            await this.conn.query("INSERT INTO scene (name, description, fk_user_id) VALUES (?, ?, ?);", [sceneData.name, sceneData.description, user.user_id]);
-
-            return { status: HttpStatus.CREATED, message: "Szene erfolgreich erstellt." }
+            const scenes = await this.conn.query<IScene[]>("INSERT INTO scene (name, description, fk_user_id) VALUES (?, ?, ?) RETURNING *;", [sceneData.name, sceneData.description, user.user_id]);
+            return { status: HttpStatus.CREATED, scene: scenes[0] };
         } catch (err) {
             throw new InternalServerErrorException("Serverfehler.");
         }

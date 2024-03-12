@@ -41,15 +41,15 @@ export class SceneController {
         return this.sceneService.getUnapprovedScene(id);
     }
 
-    @Get("unapproved/all")
+    @Get("all")
     async getUnapprovedScenesUser(@GetUser() user: IUser) {
-        const check = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ? AND approved = FALSE;", [user.user_id]);
+        const check = await this.conn.query<IScene[]>("SELECT * FROM scene WHERE fk_user_id = ?;", [user.user_id]);
 
         if (check.length <= 0 && !user.admin) {
             throw new ForbiddenException("Kein Zugriff.");
         }
 
-        return this.sceneService.getUnapprovedScenesUser(user);
+        return this.sceneService.getScenesUser(user);
     }
 
     @Get("unapproved/admin")
